@@ -1,3 +1,574 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MineQuest - Dò Mìn</title>
+<style>
+:root {
+  --ocean: #b9edfa;
+  --deep: #123e55;
+  --green: #69d58a;
+  --green-dark: #39ad65;
+  --yellow: #ffd447;
+  --red: #f04452;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: var(--deep);
+  background:
+    radial-gradient(circle at 10% 5%, #e6fcff 0, transparent 35%),
+    linear-gradient(145deg, #a5e9f5, #d5f7ec 55%, #8ed6ef);
+}
+button, select { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, select:focus-visible {
+  outline: 3px solid #ffbf35;
+  outline-offset: 3px;
+}
+header {
+  text-align: center;
+  padding: 22px 12px 12px;
+}
+.logo {
+  font-size: clamp(27px, 5vw, 43px);
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #15536b;
+  text-shadow: 2px 3px 0 #ffffffaa;
+}
+.subtitle { margin-top: 5px; color: #38677a; }
+main {
+  width: min(1050px, 96%);
+  margin: 12px auto 35px;
+}
+.panel {
+  background: #ffffffd9;
+  border: 2px solid #ffffff;
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 12px 30px #28718b1c;
+}
+.toolbar {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  align-items: center;
+}
+select, .btn {
+  border: 0;
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-weight: 750;
+}
+select { background: #e7f7fb; color: var(--deep); }
+.btn {
+  background: #176a84;
+  color: white;
+  box-shadow: 0 3px 0 #10495e;
+  transition: transform .12s, filter .12s;
+}
+.btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+.btn:active { transform: translateY(2px); box-shadow: none; }
+.btn.green { background: #27864d; box-shadow: 0 3px 0 #176337; }
+.btn.yellow { background: #f1c735; color: #4d3a00; box-shadow: 0 3px 0 #c59a0e; }
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.stat {
+  text-align: center;
+  border-radius: 14px;
+  padding: 11px 4px;
+  background: #e6f7fa;
+}
+.stat small { display: block; color: #527b88; font-weight: 700; }
+.stat strong { display: block; font-size: 23px; margin-top: 3px; }
+.board-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 8px 0 12px;
+}
+.board-heading h2 { font-size: 17px; margin: 0; }
+.zoom { display: flex; gap: 7px; align-items: center; }
+.zoom .btn { padding: 6px 12px; font-size: 18px; }
+#zoomLabel { font-size: 13px; font-weight: 800; min-width: 43px; text-align: center; }
+.board-wrap {
+  width: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 8px;
+  background: #d9f4f8;
+  border: 2px solid #b1e6ed;
+  border-radius: 15px;
+  min-height: 130px;
+}
+#board {
+  display: grid;
+  gap: 3px;
+  width: max-content;
+  margin: 0 auto;
+  --cell: 43px;
+}
+.cell {
+  width: var(--cell);
+  height: var(--cell);
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: var(--green);
+  box-shadow: inset 0 -3px 0 #23995066;
+  color: #103f2b;
+  font-size: calc(var(--cell) * .49);
+  font-weight: 900;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  user-select: none;
+  transition: background .12s, transform .1s;
+}
+.cell.hidden:hover { background: #8ae5a6; transform: scale(1.04); }
+.cell.open {
+  background: #f2fff5;
+  box-shadow: inset 0 0 0 1px #b6e8c5;
+  border-radius: 5px;
+}
+.cell.flag { background: var(--yellow); box-shadow: inset 0 -3px 0 #d4a719; }
+.cell.bomb { background: var(--red); box-shadow: inset 0 -3px 0 #bb2433; }
+.cell.exploded { background: #b91628; animation: shake .25s; }
+.cell.hinted { outline: 4px solid #ffb62e; outline-offset: -4px; }
+.cell[data-n="1"] { color: #2376ee; }
+.cell[data-n="2"] { color: #15834c; }
+.cell[data-n="3"] { color: #ed3948; }
+.cell[data-n="4"] { color: #713bc5; }
+.cell[data-n="5"] { color: #b95a20; }
+.cell[data-n="6"] { color: #1598a1; }
+.cell[data-n="7"] { color: #374151; }
+.cell[data-n="8"] { color: #8b4770; }
+.cell:disabled { cursor: default; }
+.status {
+  text-align: center;
+  font-weight: 750;
+  padding: 12px 4px 2px;
+  min-height: 40px;
+}
+.help {
+  margin-top: 14px;
+  line-height: 1.65;
+  color: #456775;
+  font-size: 13px;
+}
+.help strong { color: #174d62; }
+footer { text-align: center; padding: 0 10px 24px; color: #527b88; font-size: 12px; }
+@keyframes shake {
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: #0b304bd9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  z-index: 10;
+}
+.overlay[hidden] { display: none; }
+.modal {
+  width: min(400px, 100%);
+  background: linear-gradient(150deg, white, #e4fff0);
+  border: 3px solid white;
+  border-radius: 26px;
+  padding: 28px 20px;
+  text-align: center;
+  box-shadow: 0 20px 70px #001b35aa;
+  animation: pop .3s ease-out;
+}
+.trophy { font-size: 75px; line-height: 1.3; }
+.modal h2 { margin: 8px 0; font-size: 39px; color: #168348; }
+.modal p { line-height: 1.5; color: #315a69; }
+.modal .btn { margin-top: 8px; min-width: 170px; }
+@keyframes pop {
+  from { opacity: 0; transform: scale(.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+@media (max-width: 600px) {
+  main { width: 98%; }
+  .panel { padding: 10px; }
+  #board { gap: 2px; }
+  .cell { border-radius: 4px; }
+  .stats { gap: 5px; }
+  .stat strong { font-size: 19px; }
+  .toolbar { gap: 8px; }
+  .toolbar .btn, select { padding: 10px; font-size: 13px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🌊 MINEQUEST 💣</div>
+  <div class="subtitle">Bình tĩnh suy luận. Đừng để bom đánh lừa bạn!</div>
+</header>
+
+<main>
+<section class="panel">
+  <div class="toolbar">
+    <select id="difficulty" aria-label="Chọn cấp độ">
+      <option value="easy">🌱 Dễ · 7 × 7</option>
+      <option value="normal">🎯 Bình thường · 14 × 14</option>
+      <option value="hard">🔥 Khó · 28 × 28</option>
+    </select>
+    <button class="btn" id="restart">🔄 Chơi lại</button>
+    <button class="btn yellow" id="hint">💡 Gợi ý (<span id="hints">3</span>)</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><small>💣 BOM CÒN LẠI</small><strong id="bombCount">10</strong></div>
+    <div class="stat"><small>⏱️ THỜI GIAN</small><strong id="timer">00:00</strong></div>
+    <div class="stat"><small>🏁 ĐÃ MỞ</small><strong id="opened">0</strong></div>
+  </div>
+
+  <div class="board-heading">
+    <h2 id="levelTitle">🌱 Khu vực dễ</h2>
+    <div class="zoom">
+      <button class="btn" id="zoomOut" aria-label="Thu nhỏ">−</button>
+      <span id="zoomLabel">100%</span>
+      <button class="btn" id="zoomIn" aria-label="Phóng to">+</button>
+    </div>
+  </div>
+
+  <div class="board-wrap" id="boardWrap">
+    <div id="board" role="group" aria-label="Bàn chơi dò mìn"></div>
+  </div>
+  <div class="status" id="status" aria-live="polite">Chọn một ô để bắt đầu!</div>
+
+  <div class="help">
+    <strong>🎮 Cách chơi:</strong><br>
+    🟩 Nhấn chuột trái để mở ô.<br>
+    🚩 Nhấn chuột phải để cắm hoặc gỡ cờ.<br>
+    💡 Gợi ý giúp mở một ô an toàn, tối đa 3 lần mỗi ván.<br>
+    🔎 Dùng nút + / − để thay đổi kích thước ô. Bàn chơi lớn có thể cuộn.<br>
+    <strong>🏆 Mục tiêu:</strong> Mở tất cả ô không có bom để chiến thắng.
+  </div>
+</section>
+</main>
+<footer>MineQuest · Một chút may mắn, thật nhiều suy luận 💚</footer>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="modal">
+    <div class="trophy" id="trophy">🏆</div>
+    <h2 id="resultTitle">VICTORY!</h2>
+    <p id="resultMessage"></p>
+    <p id="resultStats"></p>
+    <button class="btn green" id="playAgain">Chơi ván mới ↻</button>
+  </div>
+</div>
+
+<script>
+const levels = {
+  easy:   { size: 7,  mines: 10, title: "🌱 Khu vực dễ" },
+  normal: { size: 14, mines: 35, title: "🎯 Khu vực bình thường" },
+  hard:   { size: 28, mines: 110, title: "🔥 Khu vực khó" }
+};
+
+const boardEl = document.getElementById("board");
+const difficultyEl = document.getElementById("difficulty");
+const statusEl = document.getElementById("status");
+const overlay = document.getElementById("overlay");
+
+let size, mineTotal, cells, firstClick, ended, flags;
+let hintsLeft, openedCount, seconds, timerId, zoom, currentLevel;
+
+function newGame() {
+  clearInterval(timerId);
+  timerId = null;
+  seconds = 0;
+  zoom = 1;
+  currentLevel = difficultyEl.value;
+
+  const config = levels[currentLevel];
+  size = config.size;
+  mineTotal = config.mines;
+  cells = [];
+  flags = 0;
+  hintsLeft = 3;
+  openedCount = 0;
+  firstClick = true;
+  ended = false;
+
+  overlay.hidden = true;
+  document.getElementById("timer").textContent = "00:00";
+  document.getElementById("hints").textContent = hintsLeft;
+  document.getElementById("bombCount").textContent = mineTotal;
+  document.getElementById("opened").textContent = 0;
+  document.getElementById("levelTitle").textContent = config.title;
+  statusEl.textContent = "Chọn một ô để bắt đầu!";
+  boardEl.innerHTML = "";
+  boardEl.style.gridTemplateColumns = `repeat(${size}, var(--cell))`;
+
+  const cellSize = size === 7 ? 43 : size === 14 ? 31 : 25;
+  boardEl.style.setProperty("--cell", cellSize + "px");
+  updateZoom();
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      const cell = {
+        r, c, mine: false, count: 0,
+        open: false, flag: false, el: null
+      };
+      const button = document.createElement("button");
+      button.className = "cell hidden";
+      button.type = "button";
+      button.setAttribute("aria-label", `Hàng ${r + 1}, cột ${c + 1}, chưa mở`);
+      button.addEventListener("click", () => openCell(cell));
+      button.addEventListener("contextmenu", e => {
+        e.preventDefault();
+        toggleFlag(cell);
+      });
+      cell.el = button;
+      cells.push(cell);
+      boardEl.appendChild(button);
+    }
+  }
+}
+
+function at(r, c) {
+  if (r < 0 || c < 0 || r >= size || c >= size) return null;
+  return cells[r * size + c];
+}
+
+function neighbors(cell) {
+  const result = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (!dr && !dc) continue;
+      const next = at(cell.r + dr, cell.c + dc);
+      if (next) result.push(next);
+    }
+  }
+  return result;
+}
+
+function placeMines(safeCell) {
+  // Lần mở đầu tiên luôn an toàn.
+  const available = cells.filter(cell =>
+    cell !== safeCell &&
+    !(Math.abs(cell.r - safeCell.r) <= 1 &&
+      Math.abs(cell.c - safeCell.c) <= 1)
+  );
+
+  // Nếu bàn nhỏ không đủ ô sau khi chừa vùng đầu,
+  // vẫn luôn chừa ô đầu tiên an toàn.
+  while (mineTotal > available.length) {
+    const extra = cells.find(cell =>
+      cell !== safeCell && !available.includes(cell)
+    );
+    if (!extra) break;
+    available.push(extra);
+  }
+
+  for (let i = available.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [available[i], available[j]] = [available[j], available[i]];
+  }
+
+  available.slice(0, mineTotal).forEach(cell => cell.mine = true);
+
+  cells.forEach(cell => {
+    if (!cell.mine) {
+      cell.count = neighbors(cell).filter(n => n.mine).length;
+    }
+  });
+}
+
+function startTimer() {
+  if (timerId) return;
+  timerId = setInterval(() => {
+    seconds++;
+    const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const ss = String(seconds % 60).padStart(2, "0");
+    document.getElementById("timer").textContent = `${mm}:${ss}`;
+  }, 1000);
+}
+
+function openCell(cell) {
+  if (ended || cell.open || cell.flag) return;
+
+  if (firstClick) {
+    firstClick = false;
+    placeMines(cell);
+    startTimer();
+  }
+
+  if (cell.mine) {
+    cell.open = true;
+    cell.el.classList.remove("hidden");
+    cell.el.classList.add("bomb", "exploded");
+    cell.el.textContent = "💥";
+    finish(false);
+    return;
+  }
+
+  reveal(cell);
+  checkWin();
+}
+
+function reveal(cell) {
+  if (!cell || cell.open || cell.flag || cell.mine) return;
+
+  cell.open = true;
+  openedCount++;
+  cell.el.classList.remove("hidden", "hinted");
+  cell.el.classList.add("open");
+  cell.el.setAttribute("aria-label",
+    cell.count ? `Có ${cell.count} bom xung quanh` : "Ô trống an toàn"
+  );
+
+  if (cell.count > 0) {
+    cell.el.textContent = cell.count;
+    cell.el.dataset.n = cell.count;
+  } else {
+    cell.el.textContent = "";
+    neighbors(cell).forEach(n => {
+      if (!n.mine && !n.open) reveal(n);
+    });
+  }
+  document.getElementById("opened").textContent = openedCount;
+}
+
+function toggleFlag(cell) {
+  if (ended || cell.open) return;
+
+  cell.flag = !cell.flag;
+  flags += cell.flag ? 1 : -1;
+
+  cell.el.classList.toggle("flag", cell.flag);
+  cell.el.textContent = cell.flag ? "🚩" : "";
+  cell.el.setAttribute("aria-label", cell.flag ? "Đã cắm cờ" : "Chưa mở");
+
+  document.getElementById("bombCount").textContent = mineTotal - flags;
+}
+
+function giveHint() {
+  if (ended) return;
+
+  if (hintsLeft <= 0) {
+    statusEl.textContent = "Bạn đã dùng hết 3 gợi ý trong ván này!";
+    return;
+  }
+
+  // Chưa đặt bom thì tạo bàn chơi để tìm ô an toàn.
+  if (firstClick) {
+    const safe = cells[Math.floor(Math.random() * cells.length)];
+    firstClick = false;
+    placeMines(safe);
+    startTimer();
+    hintsLeft--;
+    reveal(safe);
+  } else {
+    const safeCells = cells.filter(cell =>
+      !cell.mine && !cell.open && !cell.flag
+    );
+
+    if (!safeCells.length) {
+      statusEl.textContent = "Không còn ô an toàn để gợi ý!";
+      return;
+    }
+
+    const target = safeCells[Math.floor(Math.random() * safeCells.length)];
+    hintsLeft--;
+    reveal(target);
+  }
+
+  document.getElementById("hints").textContent = hintsLeft;
+  statusEl.textContent = `💡 Đã mở một ô an toàn! Còn ${hintsLeft} gợi ý.`;
+  checkWin();
+}
+
+function checkWin() {
+  const safeTotal = size * size - mineTotal;
+  if (openedCount === safeTotal) finish(true);
+}
+
+function finish(won) {
+  ended = true;
+  clearInterval(timerId);
+  timerId = null;
+
+  cells.forEach(cell => {
+    cell.el.disabled = true;
+    if (!won && cell.mine && !cell.flag) {
+      cell.el.classList.remove("hidden");
+      cell.el.classList.add("bomb");
+      cell.el.textContent = "💣";
+    }
+    if (!won && cell.flag && !cell.mine) {
+      cell.el.textContent = "❌";
+    }
+  });
+
+  if (won) {
+    document.getElementById("trophy").textContent = "🏆";
+    document.getElementById("resultTitle").textContent = "VICTORY!";
+    const messages = {
+      easy: "Thk này ngu 😭",
+      normal: "Này cx bình thường thôi 😏",
+      hard: "Thằng này đc! 🔥"
+    };
+    document.getElementById("resultMessage").textContent =
+      messages[currentLevel];
+    statusEl.textContent = "🏆 Chiến thắng! Bạn đã tìm được tất cả ô an toàn.";
+  } else {
+    document.getElementById("trophy").textContent = "💥";
+    document.getElementById("resultTitle").textContent = "BOOM!";
+    document.getElementById("resultMessage").textContent =
+      "Bạn đã đạp trúng bom! Thử lại và suy luận kỹ hơn nhé.";
+    statusEl.textContent = "💥 Trúng bom! Nhấn chơi lại để thử lần nữa.";
+  }
+
+  document.getElementById("resultStats").textContent =
+    `Cấp độ: ${levels[currentLevel].title} · Thời gian: ` +
+    document.getElementById("timer").textContent;
+
+  overlay.hidden = false;
+}
+
+function updateZoom() {
+  const cellSize = currentLevel === "easy" ? 43 :
+                   currentLevel === "normal" ? 31 : 25;
+  boardEl.style.setProperty("--cell", `${cellSize * zoom}px`);
+  document.getElementById("zoomLabel").textContent =
+    Math.round(zoom * 100) + "%";
+}
+
+document.getElementById("zoomIn").addEventListener("click", () => {
+  zoom = Math.min(1.6, +(zoom + 0.1).toFixed(1));
+  updateZoom();
+});
+document.getElementById("zoomOut").addEventListener("click", () => {
+  zoom = Math.max(0.5, +(zoom - 0.1).toFixed(1));
+  updateZoom();
+});
+document.getElementById("hint").addEventListener("click", giveHint);
+document.getElementById("restart").addEventListener("click", newGame);
+document.getElementById("playAgain").addEventListener("click", newGame);
+difficultyEl.addEventListener("change", newGame);
+
+newGame();
+</script>
+</body>
+</html>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
